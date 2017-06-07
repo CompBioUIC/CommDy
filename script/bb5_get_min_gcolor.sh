@@ -2,7 +2,7 @@
 
 file=$1
 
-lastline=`tail -1 $file`
+lastline=`awk '$2=="min"' $file | tail -1`
 check=`echo $lastline | awk '{print $2}'`
 if [ x$check != xmin ]; then
     echo "error on last line"
