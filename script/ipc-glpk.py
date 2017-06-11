@@ -13,9 +13,12 @@ limit=None
 quiet=False
 verbose=False
 
+# Parses command-line flags.
 for arg in sys.argv[1:]:
   p = re.compile('-.+')
+  # If arg is a flag.
   if p.match(arg):
+    # Limits to a single iteration of path covering.
     if arg == '-1':
       limit=1
     elif arg == '-v':
@@ -25,53 +28,62 @@ for arg in sys.argv[1:]:
     else:
       print "Unknown option", arg
       exit(1)
+  # Else, arg is a filename.
   else:
+    # If arg is a GTM filename.
     if arg.endswith('.gtm') or arg.endswith('.gtm2'):
       gtm_fname = arg
+    # If arg is a path-cover filename (i.e. the output of a previous run).
     elif arg.endswith('.out'):
       pc_fname = arg
     else:
       print 'Unknown file extension:', arg
       exit(1)
 
+# If no GTM file is given, try to guess it.
 if gtm_fname is None:
   gtm_fname = guess_gtmfile()
+if gtm_fname is None:
+  print "Cannot guess a GTM file"
+  exit(1)
+# Reads the GTM file.
 gtm = GtmFile(gtm_fname)
 
+# Creates mapping: group ID -> members.
 for g,s in gtm.group.iteritems():
   gtm.group[g] = set(s)
 
+# Creates a group graph from the GTM.
 group_graph = GroupGraph(gtm)
 group = group_graph.group
 group_time = group_graph.group_time
 
-if gtm_fname[-4:] != ".gtm" and gtm_fname[-5:] != ".gtm2":
-  raise
+# Generates unique tmp filenames.
 bname = os.path.splitext(os.path.basename(gtm_fname))[0]
 pid=os.getpid()
 prefix = os.path.dirname(gtm_fname)
-if prefix!="": prefix += os.path.sep
+if prefix != "": prefix += os.path.sep
 out_fname = prefix + "%s-ipc.glpk.%d.out" %(bname,pid)
 gms_fname = prefix + "%s-ipc.glpk.%d.mod" %(bname,pid)
 log_fname = prefix + "%s-ipc.glpk.%d.log" %(bname,pid)
-#out_fname = "%s-ipc.glpk.out" %(bname)
-#gms_fname = "%s-ipc.glpk.mod" %(bname)
-#log_fname = "%s-ipc.glpk.log" %(bname)
 
 pc_edges=[]
 if pc_fname is not None:
-  # read pathcover file
+  # read the given pathcover file (i.e. the output of a previous run).
   f = open(pc_fname, 'r')
   for line in f.readlines():
     line = line.strip()
-    line = map(int, line.split(','))
-    if len(line)==3:
-      u,v,w = line
-    elif len(line)==2:
-      u,v = line
+    fields = map(int, line.split(','))
+    if len(fields)==3:
+      # An edge from u to v (with weight w, for backward compatibility).
+      u,v,w = fields
+    elif len(fields)==2:
+      # An edge from u to v.
+      u,v = fields
     else: raise
     pc_edges.append((u,v))
 
+# Starts the main iteration, each finds a path cover on the group graph.
 it_count=0
 while limit is None or it_count<limit:
   it_count+=1
@@ -79,7 +91,8 @@ while limit is None or it_count<limit:
 
   #sys.stderr.write("assign parents\n")
 
-  # assign parent
+  # Finds the parent node of each node. The parent is defined as the incoming
+  # neighbor in the subgraph induced by the current path cover.
   parent = {}
   for e in pc_edges:
     u,v = e
@@ -111,47 +124,53 @@ while limit is None or it_count<limit:
   # if h not in inedge: inedge[h]=[]
   # inedge[h].append((g,h))
 
-  # prepare to create path graph
-  paths = []
-  first_group = {}
-  last_group = {}
+  # Prepares to create a path graph
+  first_nodes = []  # Collection of nodes which start paths.
+  first_node = {}   # first_node[g] starts the path containing g.
+  last_node = {}    # last_node[g] ends the path containing g.
 
   #sys.stderr.write("find paths\n")
 
+  # For each group, in chronological order:
   for g in group_graph.groups_intime:
     if g in parent and parent[g] != g: # possibly ending node of a path
-      h = parent[g]
-      if h in first_group:
-        p = first_group[h]
-      else:
-        p = h
-      first_group[g] = p
-      last_group[p] = g
+      parent_g = parent[g]
+      first_group_g = \
+          first_node[parent_g] if parent_g in first_node else \
+          parent_g
+      first_node[g] = first_group_g
+      last_node[first_group_g] = g
     else: # starting node of a path
-      first_group[g] = g
-      last_group[g] = g
-      paths.append(g)
+      first_node[g] = g
+      last_node[g] = g
+      first_nodes.append(g)
 
-  #sys.stderr.write("create path graph: %d paths\n"%(len(paths)))
+  #sys.stderr.write("create path graph: %d paths\n"%(len(first_nodes)))
 
   # create path graph
   edges = []
   progress=0
-  for index,p in enumerate(paths):
-    g = last_group[p]
-    #if progress!=g*100/len(paths):
-    # progress=g*100/len(paths)
+  # For each path p that ends at group g, we add edges to groups h for which
+  # the members of g leave, preferring those nearer in time.
+  for index,p in enumerate(first_nodes):
+    g = last_node[p]
+    members_g = set(group_graph.group[g])
+    #if progress!=g*100/len(first_nodes):
+    # progress=g*100/len(first_nodes)
     # sys.stderr.write("progress %d%%\n"%(progress))
-    members = set(group_graph.group[g])
     #g_index = group_graph.groups_intime.index(g)
-    for h in paths[index+1:]:
+
+    # For each group h that comes after g.
+    for h in first_nodes[index+1:]:
       if group_graph.group_time[h]<=group_graph.group_time[g]:
+        # We skip those where time(h) <= time(g).
         continue
-      h_inter = members & set(group_graph.group[h])
+      h_inter = members_g & set(group_graph.group[h])
       if len(h_inter)>0:
         edges.append((p, h, len(h_inter)))
-        members = members - h_inter
-      if len(members)==0: break
+        # Removes the members accounted for by the new edge.
+        members_g = members_g - h_inter
+        if len(members_g)==0: break
 
   if not edges:
     sys.stderr.write("no edges\n")
@@ -168,10 +187,10 @@ while limit is None or it_count<limit:
   f.write("    out_degree {i in V}: sum{j in V} x[i,j] <= 1;\n")
   f.write("data;\n")
 
-  n = len(paths)
+  n = len(first_nodes)
   m = len(edges)
   f.write("set V :=")
-  for p in paths:
+  for p in first_nodes:
     f.write(" %d"%p)
   f.write(";\n")
 
@@ -209,11 +228,11 @@ while limit is None or it_count<limit:
   if pcpc_edges:
     for e in pcpc_edges:
       u,v = e
-      if u not in last_group:
+      if u not in last_node:
         print "u", u
-        print "paths", paths
-        print "last_group", last_group
-      pc_edges.append((last_group[u], v))
+        print "paths", first_nodes
+        print "last_node", last_node
+      pc_edges.append((last_node[u], v))
   else:
     break
 
