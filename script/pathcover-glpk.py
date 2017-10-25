@@ -1,6 +1,3 @@
-#!/usr/bin/python
-
-import sys
 from itertools import groupby
 from pandas import DataFrame
 from cvxopt import solvers, sparse, spdiag, matrix, spmatrix
@@ -196,9 +193,9 @@ def test2():
     #  print((r.time, r.group))
     #print
 
-def main(args):
+def main():
   test2()
 
 # Test.
 if __name__ == '__main__':
-    main(sys.argv[1:])
+    main()
