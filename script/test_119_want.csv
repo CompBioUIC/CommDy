@@ -1,0 +1,13 @@
+time,group,individual,gcolor,icolor
+t1,g1,i1,2,2
+t2,g1,i1,1,1
+t2,g1,i2,1,1
+t2,g1,i3,1,1
+t2,g1,i4,1,1
+t2,g1,i5,1,1
+t3,g1,i1,1,1
+t3,g1,i2,1,1
+t3,g1,i3,1,1
+t3,g1,i4,1,1
+t3,g1,i5,1,1
+t4,g1,i1,2,2
