@@ -1,8 +1,9 @@
 import unittest
 
 from cvxopt import solvers
-from pathcover import color_groups
-from pandas import DataFrame
+from pathcover import color_groups, color_group_and_individual
+from pandas import DataFrame, read_csv
+from pandas.util.testing import assert_frame_equal
 from collections import namedtuple
 from test_util import expand
 
@@ -109,6 +110,30 @@ class TestPathCover(unittest.TestCase):
                 self.assertEqual(len(color_classes), len(subtest.want_eq_classes))
                 for i, (got, want) in enumerate(zip(color_classes, subtest.want_eq_classes)):
                     self.assertEqual(sorted(got), want, "i=%d"%i)
+
+    def test_file_111(self):
+        df = read_csv('test.csv')
+        color_group_and_individual(df, sw=1, ab=1, vi=1)
+        want = read_csv('test_111_want.csv')
+        assert_frame_equal(df, want)
+
+    def test_file_119(self):
+        df = read_csv('test.csv')
+        color_group_and_individual(df, sw=1, ab=1, vi=9)
+        want = read_csv('test_119_want.csv')
+        assert_frame_equal(df, want)
+
+    def test2_file_111(self):
+        df = read_csv('test2.csv')
+        color_group_and_individual(df, sw=1, ab=1, vi=1)
+        want = read_csv('test2_111_want.csv')
+        assert_frame_equal(df, want)
+
+    def test2_file_191(self):
+        df = read_csv('test2.csv')
+        color_group_and_individual(df, sw=1, ab=9, vi=1)
+        want = read_csv('test2_191_want.csv')
+        assert_frame_equal(df, want)
 
 if __name__ == '__main__':
     unittest.main()
