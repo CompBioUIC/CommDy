@@ -2,6 +2,7 @@ import sys
 from cvxopt import solvers, matrix, spmatrix, sparse
 from itertools import groupby
 from pandas import DataFrame
+from color_individuals import color_individuals
 
 # Suppress the progress message during solvers.lp().
 solvers.options['show_progress'] = False
@@ -62,28 +63,29 @@ class UnionFind:
 #        subject to:       A  * x <= b
 # So we multiple -1 through the last set of constraints (x_e >= 0) to get it
 # in the accepted form.
-def create_linear_program(df, debug=False):
-    t_min = df.time.min()
-    t_max = df.time.max()
+def create_linear_program(df, debug=False,
+        t_col='time', g_col='group', i_col='individual'):
+    t_min = df[t_col].min()
+    t_max = df[t_col].max()
     w = {}
 
     # Creates nodes and edges.
     node_set = set()
-    for i, gb in df.groupby(["individual"]):
-        real_nodes = ["%s.%s"%tg for tg in zip(gb.time, gb.group)]
+    for i, gb in df.groupby(i_col):
+        real_nodes = ["%s.%s"%tg for tg in zip(gb[t_col], gb[g_col])]
         nodes = []
-        if gb.time.iloc[0] != t_min:
+        if gb[t_col].iloc[0] != t_min:
             # Create a fake node for a group that appears first in the second
             # time step or later so that the optimal path-cover is not forced
             # to be connected to some small group in a preceeding time step.
-            nodes.append("%s.%s.first"%(gb.time.iloc[0], gb.group.iloc[0]))
+            nodes.append("%s.%s.first"%(gb[t_col].iloc[0], gb[g_col].iloc[0]))
         nodes.extend(real_nodes)
-        if gb.time.iloc[-1] != t_max and t_min != t_max:
+        if gb[t_col].iloc[-1] != t_max and t_min != t_max:
             # Create a fake node for a group that appear last in the second to
             # last time step or earlier so that the optimal path-cover is not
             # forced to be connected to some small group in a succeeding time
             # step.
-            nodes.append("%s.%s.last"%(gb.time.iloc[-1], gb.group.iloc[-1]))
+            nodes.append("%s.%s.last"%(gb[t_col].iloc[-1], gb[g_col].iloc[-1]))
         # Update the set of all nodes.
         node_set.update(nodes)
         # Add edges between real/fake nodes with weight 1 per individual.
@@ -169,11 +171,25 @@ def convert_lp_solution_to_coloring(edges, sol, debug=False):
             tg_color[t][g] = color_idx + 1
     return tg_color
 
-def color_groups(df):
-    c, A, b, nodes, edges = create_linear_program(df)
+def color_groups(df,
+        t_col='time', g_col='group', i_col='individual'):
+    c, A, b, nodes, edges = create_linear_program(df, t_col=t_col, g_col=g_col, i_col=i_col)
     sol = solvers.lp(c, A, b)
     if sol['status'] != 'optimal':
         print("Solver error:", sol, file=sys.stderr)
         return None
     tg_color = convert_lp_solution_to_coloring(edges, sol)
     return tg_color
+
+def color_dataframe(df,
+        sw=1, ab=1, vi=1,
+        t_col='time', g_col='group', i_col='individual',
+        gcolor_col='gcolor', icolor_col='icolor'):
+    # Color the groups.
+    tg_color = color_groups(df, t_col=t_col, g_col=g_col, i_col=i_col)
+    df[gcolor_col] = df.apply(lambda x : tg_color[x[t_col]][x[g_col]], axis=1)
+    # Color the individuals.
+    tgi = df.apply(lambda x : (x[t_col], x[g_col], x[i_col]), axis=1)
+    total_min_color, it_color = color_individuals(tgi, tg_color, sw=sw, ab=ab, vi=vi)
+    df[icolor_col] = df.apply(lambda x : it_color[x[i_col], x[t_col]], axis=1)
+    return total_min_color
