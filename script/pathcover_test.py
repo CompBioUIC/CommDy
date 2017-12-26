@@ -8,9 +8,9 @@ from test_util import expand
 
 def to_dataframe(tgi):
     return DataFrame(data={
-        'time': [t for t, g, i in tgi],
-        'group': [g for t, g, i in tgi],
-        'individual': [i for t, g, i in tgi],
+        'time': [t for t, _, _ in tgi],
+        'group': [g for _, g, _ in tgi],
+        'individual': [i for _, _, i in tgi],
     })
 
 TestCase = namedtuple('TestCase', 'name tgi want_eq_classes')
@@ -111,5 +111,4 @@ class TestPathCover(unittest.TestCase):
                     self.assertEqual(sorted(got), want, "i=%d"%i)
 
 if __name__ == '__main__':
-    solvers.options['show_progress'] = False
     unittest.main()
