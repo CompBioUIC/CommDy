@@ -112,27 +112,27 @@ class TestPathCover(unittest.TestCase):
                     self.assertEqual(sorted(got), want, "i=%d"%i)
 
     def test_file_111(self):
-        df = read_csv('test.csv')
+        df = read_csv('testdata/test.csv')
         color_dataframe(df, sw=1, ab=1, vi=1)
-        want = read_csv('test_111_want.csv')
+        want = read_csv('testdata/test_111_want.csv')
         assert_frame_equal(df, want)
 
     def test_file_119(self):
-        df = read_csv('test.csv')
+        df = read_csv('testdata/test.csv')
         color_dataframe(df, sw=1, ab=1, vi=9)
-        want = read_csv('test_119_want.csv')
+        want = read_csv('testdata/test_119_want.csv')
         assert_frame_equal(df, want)
 
     def test2_file_111(self):
-        df = read_csv('test2.csv')
+        df = read_csv('testdata/test2.csv')
         color_dataframe(df, sw=1, ab=1, vi=1)
-        want = read_csv('test2_111_want.csv')
+        want = read_csv('testdata/test2_111_want.csv')
         assert_frame_equal(df, want)
 
     def test2_file_191(self):
-        df = read_csv('test2.csv')
+        df = read_csv('testdata/test2.csv')
         color_dataframe(df, sw=1, ab=9, vi=1)
-        want = read_csv('test2_191_want.csv')
+        want = read_csv('testdata/test2_191_want.csv')
         assert_frame_equal(df, want)
 
 if __name__ == '__main__':
