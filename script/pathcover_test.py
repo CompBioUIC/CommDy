@@ -113,27 +113,27 @@ class TestPathCover(unittest.TestCase):
 
     def test_file_111(self):
         df = read_csv('testdata/test.csv')
-        color_dataframe(df, sw=1, ab=1, vi=1)
+        got = color_dataframe(df, sw=1, ab=1, vi=1)
         want = read_csv('testdata/test_111_want.csv')
-        assert_frame_equal(df, want)
+        assert_frame_equal(got, want)
 
     def test_file_119(self):
         df = read_csv('testdata/test.csv')
-        color_dataframe(df, sw=1, ab=1, vi=9)
+        got = color_dataframe(df, sw=1, ab=1, vi=9)
         want = read_csv('testdata/test_119_want.csv')
-        assert_frame_equal(df, want)
+        assert_frame_equal(got, want)
 
     def test2_file_111(self):
         df = read_csv('testdata/test2.csv')
-        color_dataframe(df, sw=1, ab=1, vi=1)
+        got = color_dataframe(df, sw=1, ab=1, vi=1)
         want = read_csv('testdata/test2_111_want.csv')
-        assert_frame_equal(df, want)
+        assert_frame_equal(got, want)
 
     def test2_file_191(self):
         df = read_csv('testdata/test2.csv')
-        color_dataframe(df, sw=1, ab=9, vi=1)
+        got = color_dataframe(df, sw=1, ab=9, vi=1)
         want = read_csv('testdata/test2_191_want.csv')
-        assert_frame_equal(df, want)
+        assert_frame_equal(got, want)
 
 if __name__ == '__main__':
     unittest.main()

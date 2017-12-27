@@ -2,5 +2,6 @@ time,group,individual,gcolor,icolor
 t1,g1,i1,1,1
 t1,g1,i2,1,0
 t2,g1,i1,1,1
+t2,,i2,,0
 t3,g1,i1,1,1
 t3,g1,i2,1,0

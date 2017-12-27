@@ -187,9 +187,24 @@ def color_dataframe(df,
         gcolor_col='gcolor', icolor_col='icolor'):
     # Color the groups.
     tg_color = color_groups(df, t_col=t_col, g_col=g_col, i_col=i_col)
-    df[gcolor_col] = df.apply(lambda x : tg_color[x[t_col]][x[g_col]], axis=1)
+
     # Color the individuals.
     tgi = df.apply(lambda x : (x[t_col], x[g_col], x[i_col]), axis=1)
     total_min_color, it_color = color_individuals(tgi, tg_color, sw=sw, ab=ab, vi=vi)
-    df[icolor_col] = df.apply(lambda x : it_color[x[i_col], x[t_col]], axis=1)
-    return total_min_color
+
+    # Create a result data frame.
+    it_group = dict(df.apply(lambda x: ((x[i_col], x[t_col]), x[g_col]), 1).tolist())
+    data = { t_col: [], g_col: [], i_col: [], gcolor_col: [], icolor_col: [] }
+    def append(t, g, i, gcolor, icolor):
+        data[t_col].append(t)
+        data[g_col].append(g)
+        data[i_col].append(i)
+        data[gcolor_col].append(gcolor)
+        data[icolor_col].append(icolor)
+    for t in df[t_col].drop_duplicates().tolist():
+        for i in df[i_col].drop_duplicates().tolist():
+            g = it_group[i, t] if (i, t) in it_group else None
+            gcolor = tg_color[t][g] if (i, t) in it_group else None
+            icolor = it_color[i, t]
+            append(t, g, i, gcolor, icolor)
+    return DataFrame(data, columns=[t_col, g_col, i_col, gcolor_col, icolor_col])
