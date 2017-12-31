@@ -10,12 +10,23 @@ def column_map():
         'individual_color': 'individual_color',
     }
 
+def adjacent_pairs(items):
+    it = iter(items)
+    prev = next(it)
+    for curr in it:
+        yield prev, curr
+        prev = curr
+
+def avg(items):
+    return 0.0 if len(items) == 0 else sum(items) / float(len(items))
+
+# absenteeism = % times an individual is absent from his/her community's groups.
 def absenteeism(df, colmap=column_map()):
     time_group_colors = {
             t: set(group['group_color'].values)
             for t, group in df[['time', 'group_color']].drop_duplicates().dropna().groupby('time')}
     values = []
-    for individual, group in df.groupby(['individual']):
+    for _, group in df.groupby(['individual']):
         num_absent = 0
         for index, row in group.iterrows():
             my_group_color = row['group_color']
@@ -28,33 +39,82 @@ def absenteeism(df, colmap=column_map()):
         values.append(float(num_absent) / len(group))
     return values
 
+# inquisitiveness = % times an individual is present in groups other than those
+# of his/her community.
 def inquisitiveness(df):
     values = []
-    for individual, group in df.groupby(['individual']):
+    for _, group in df.groupby(['individual']):
         num_visit = 0
         for index, row in group.iterrows():
             my_group_color = row['group_color']
             my_color = row['individual_color']
             if my_group_color != my_color and pd.notna(my_group_color):
-                print("ind", individual, "visit")
-                print(row)
-                print()
                 num_visit += 1
         values.append(float(num_visit) / len(group.dropna()))
     return values
 
+# community_stay = average number of time steps an individual consecutively
+#                  stays with the same community.
 def community_stay(df):
-    #comm.stay = mean(compute.stay(na.omit(x)))
-    pass
+    values = []
+    for _, group in df.groupby(['individual']):
+        xs = []
+        my_colors = group['individual_color'].tolist()
+        if len(my_colors) == 0:
+            values.append(0.0)
+            continue
+        offset = 0
+        for i in range(1, len(my_colors)):
+            if my_colors[i] == my_colors[i-1]:
+                continue
+            xs.append(i - offset)
+            offset = i
+        xs.append(len(my_colors) - offset)
+        values.append(avg(xs))
+    return values
 
-def peer_synchrony(df):
-    #my.peers = merge(x, ig.color, by=c('time', 'i.color'), all.x=T, suffixes=c("", ".y"))
-    #peer = mean(ddply(my.peers, .(time), function(y) sum(y$ind!=y$ind.y))[,2])
-    #peer.synchrony = mean(ddply(my.peers, .(time), function(y) {
-    #    z = with(y[y$ind!=y$ind.y,], next.i.color==next.i.color.y)
-    #    ifelse (length(z)==0, 0, z)
-    #})[,2])
-    pass
+# A subgroup of a group contains the members of the same community.
+def compute_subgroups(df):
+    community_subgroups = {}
+    for _, row in df.dropna().iterrows():
+        t, g, i, c = [row[x] for x in ['time', 'group', 'individual', 'individual_color']]
+        if (t, g, c) in community_subgroups:
+            community_subgroups[t, g, c].add(i)
+        else:
+            community_subgroups[t, g, c] = set([i])
+    return community_subgroups
+
+# average number of group memebers other than itself that share the same
+# community identity. The averaging is done over observed time steps.
+def avg_num_peers(df, community_subgroups):
+    values = []
+    for _, group in df.groupby(['individual']):
+        xs = []
+        for _, row in group.dropna().iterrows():
+            g = row['group']
+            t = row['time']
+            ic = row['individual_color']
+            xs.append(len(community_subgroups[t, g, ic]) - 1)
+        values.append(avg(xs))
+    return values
+
+# The number of peers (other members of the group with the same community
+# identity) who were peers in the previous observed time step.
+def peer_synchrony(df, community_subgroups):
+    values = []
+    for _, group in df.groupby(['individual']):
+        xs = []
+        for (_, prev_row), (_, curr_row) in adjacent_pairs(group.dropna().iterrows()):
+            t1, g1, c1 = prev_row['time'], prev_row['group'], prev_row['individual_color']
+            t2, g2, c2 = curr_row['time'], curr_row['group'], curr_row['individual_color']
+            members1 = community_subgroups[t1, g1, c1]
+            members2 = community_subgroups[t2, g2, c2]
+            if len(members2) == 1:
+                xs.append(0.0)
+            else:
+                xs.append((len(members1.intersection(members2)) - 1.0) / (len(members2) - 1.0))
+        values.append(avg(xs))
+    return values
 
 def group_size(df):
     ##group.size = mean(merge(x, ddply(gtm, "group", nrow))$V1)
