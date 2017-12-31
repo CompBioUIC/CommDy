@@ -455,5 +455,52 @@ class TestGroupHomogeneity(unittest.TestCase):
         want = [1.0, 1.0, 0.0]
         self.assertEqual(got, want, "got -> want")
 
+class TestIndividualApparancy(unittest.TestCase):
+
+    def test_two_time_steps(self):
+        df = pd.DataFrame(
+            data={
+                'time'             : ['t1', 't1', 't2', 't2'],
+                'group'            : ['g1', 'g2', 'g1', 'g2'],
+                'individual'       : ['i1', 'i2', 'i1', 'i2'],
+                'group_color'      : [   1,    1,    1,    1],
+                'individual_color' : [   1,    2,    1,    2],
+            },
+            columns = columns,
+        )
+        got = individual_apparency(df)
+        want = [2.0, 2.0]
+        self.assertEqual(got, want, "got -> want")
+
+    def test_3_time_steps(self):
+        df = pd.DataFrame(
+            data={
+                'time'             : ['t1', 't2', 't3'],
+                'group'            : ['g1', 'g1', 'g1'],
+                'individual'       : ['i1', 'i1', 'i1'],
+                'group_color'      : [   1,    1,    2],
+                'individual_color' : [   1,    1,    2],
+            },
+            columns = columns,
+        )
+        got = individual_apparency(df)
+        want = [1.5]
+        self.assertEqual(got, want, "got -> want")
+
+    def test_flipping(self):
+        df = pd.DataFrame(
+            data={
+                'time'             : ['t1', 't2', 't3'],
+                'group'            : ['g1', 'g1', 'g1'],
+                'individual'       : ['i1', 'i1', 'i1'],
+                'group_color'      : [   1,    2,    1],
+                'individual_color' : [   1,    2,    1],
+            },
+            columns = columns,
+        )
+        got = individual_apparency(df)
+        want = [2.0]
+        self.assertEqual(got, want, "got -> want")
+
 if __name__ == '__main__':
     unittest.main()

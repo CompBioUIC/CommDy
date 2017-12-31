@@ -137,8 +137,15 @@ def group_homogeneity(df):
     return values
 
 def individual_apparency(df):
-    #ind.apparancy = nrow(na.omit(x))/nrow(x)
-    pass
+    time_index = {t: i for i, t in enumerate(df['time'].unique())}
+    def diff(t2, t1):
+        return time_index[t2] - time_index[t1] + 1
+    community_apparency = {ic: diff(max(group['time']), min(group['time']))
+        for ic, group in df.groupby('individual_color')}
+    values = []
+    for _, group in df.groupby('individual'):
+        values.append(avg([community_apparency[ic] for ic in set(group['individual_color'].values)]))
+    return values
 
 def cyclicity(df):
     #cyclicity = sum(table(x$i.color[which(c(T, diff(x$i.color)!=0))])-1)
