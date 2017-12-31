@@ -502,6 +502,53 @@ class TestIndividualApparancy(unittest.TestCase):
         want = [2.0]
         self.assertEqual(got, want, "got -> want")
 
+class TestCyclicity(unittest.TestCase):
+
+    def test_zero(self):
+        df = pd.DataFrame(
+            data={
+                'time'             : ['t1', 't1', 't2', 't2', 't3', 't3'],
+                'group'            : ['g1', 'g1', 'g1', 'g1', 'g1', 'g1'],
+                'individual'       : ['i1', 'i2', 'i1', 'i2', 'i1', 'i2'],
+                'group_color'      : [   1,    1,    1,    1,    1,    1],
+                'individual_color' : [   1,    1,    2,    2,    2,    2],
+            },
+            columns = columns,
+        )
+        got = cyclicity(df)
+        want = [0.0, 0.0]
+        self.assertEqual(got, want, "got -> want")
+
+    def test_one(self):
+        df = pd.DataFrame(
+            data={
+                'time'             : ['t1', 't2', 't3', 't4', 't1', 't2', 't3', 't4'],
+                'group'            : ['g1', 'g1', 'g1', 'g1', 'g1', 'g1', 'g1', 'g1'],
+                'individual'       : ['i1', 'i1', 'i1', 'i1', 'i2', 'i2', 'i2', 'i2'],
+                'group_color'      : [   1,    1,    1,    1,    1,    1,    1,    1],
+                'individual_color' : [   1,    2,    2,    1,    1,    2,    2,    1],
+            },
+            columns = columns,
+        )
+        got = cyclicity(df)
+        want = [1.0, 1.0]
+        self.assertEqual(got, want, "got -> want")
+
+    def test_two(self):
+        df = pd.DataFrame(
+            data={
+                'time'             : ['t1', 't2', 't3', 't4', 't5', 't6'],
+                'group'            : ['g1', 'g1', 'g1', 'g1', 'g1', 'g1'],
+                'individual'       : ['i1', 'i1', 'i1', 'i1', 'i1', 'i1'],
+                'group_color'      : [   1,    1,    1,    1,    1,    1],
+                'individual_color' : [   1,    2,    2,    1,    2,    2],
+            },
+            columns = columns,
+        )
+        got = cyclicity(df)
+        want = [2.0]
+        self.assertEqual(got, want, "got -> want")
+
 class TestCommunitySize(unittest.TestCase):
 
     def test_size_two(self):

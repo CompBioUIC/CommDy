@@ -148,8 +148,13 @@ def individual_apparency(df):
     return values
 
 def cyclicity(df):
-    # TODO: implemen this.
-    pass
+    values = []
+    for i, group in df.groupby('individual'):
+        colors = group['individual_color']
+        consecutive_uniques = colors[colors.shift() != colors]
+        value = consecutive_uniques.count() - group['individual_color'].nunique()
+        values.append(value)
+    return values
 
 def community_size(df):
     size = df.groupby(['time', 'individual_color'])['individual'].count().to_dict()
@@ -163,10 +168,6 @@ def community_size(df):
             xs.append(size[t, c])
         values.append(avg(xs))
     return values
-
-def individual_number_of_communities(df):
-    # TODO: implemen this.
-    pass
 
 def compute_stats(df,
         t_col='time', g_col='group', i_col='individual',
