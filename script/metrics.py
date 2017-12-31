@@ -124,11 +124,23 @@ def group_size(df):
     }
     return pd.DataFrame(d).groupby('individual')['group_size'].mean().values.tolist()
 
+def group_homogeneity(df):
+    d = {
+        'time' : df['time'],
+        'group' : df['group'],
+        'homogeneity': (df['group_color'] == df['individual_color']).astype(float),
+    }
+    h = pd.DataFrame(d).dropna().groupby(['time', 'group'])['homogeneity'].mean().to_dict()
+    values = []
+    for _, group in df.groupby('individual'):
+        values.append(avg([h[row['time'], row['group']] for _, row in group.dropna().iterrows()]))
+    return values
+
 def individual_apparency(df):
     #ind.apparancy = nrow(na.omit(x))/nrow(x)
     pass
 
-def cyclickty(df):
+def cyclicity(df):
     #cyclicity = sum(table(x$i.color[which(c(T, diff(x$i.color)!=0))])-1)
     pass
 

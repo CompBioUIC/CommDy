@@ -374,7 +374,6 @@ class TestGroupSize(unittest.TestCase):
             },
             columns = columns,
         )
-        tgc_members = compute_subgroups(df)
         got = group_size(df)
         want = [2.0, 2.0]
         self.assertEqual(got, want, "got -> want")
@@ -390,7 +389,6 @@ class TestGroupSize(unittest.TestCase):
             },
             columns = columns,
         )
-        tgc_members = compute_subgroups(df)
         got = group_size(df)
         want = [2.0, 2.5, 3.0]
         self.assertEqual(got, want, "got -> want")
@@ -406,9 +404,55 @@ class TestGroupSize(unittest.TestCase):
             },
             columns = columns,
         )
-        tgc_members = compute_subgroups(df)
         got = group_size(df)
         want = [2.0, 4./3]
+        self.assertEqual(got, want, "got -> want")
+
+class TestGroupHomogeneity(unittest.TestCase):
+
+    def test_one_zero(self):
+        df = pd.DataFrame(
+            data={
+                'time'             : ['t1', 't1', 't2', 't2'],
+                'group'            : ['g1', 'g2', 'g1', 'g2'],
+                'individual'       : ['i1', 'i2', 'i1', 'i2'],
+                'group_color'      : [   1,    1,    1,    1],
+                'individual_color' : [   1,    2,    1,    2],
+            },
+            columns = columns,
+        )
+        got = group_homogeneity(df)
+        want = [1.0, 0.0]
+        self.assertEqual(got, want, "got -> want")
+
+    def test_half(self):
+        df = pd.DataFrame(
+            data={
+                'time'             : ['t1', 't1', 't2', 't2'],
+                'group'            : ['g1', 'g1', 'g1', 'g1'],
+                'individual'       : ['i1', 'i2', 'i1', 'i2'],
+                'group_color'      : [   1,    1,    1,    1],
+                'individual_color' : [   1,    2,    1,    2],
+            },
+            columns = columns,
+        )
+        got = group_homogeneity(df)
+        want = [0.5, 0.5]
+        self.assertEqual(got, want, "got -> want")
+
+    def test_ignore_missing(self):
+        df = pd.DataFrame(
+            data={
+                'time'             : ['t1', 't1', 't1', 't2', 't2', 't2'],
+                'group'            : ['g1', 'g1', None, 'g1', 'g1', None],
+                'individual'       : ['i1', 'i2', 'i3', 'i1', 'i2', 'i3'],
+                'group_color'      : [   1,    1, None,    1,    1, None],
+                'individual_color' : [   1,    1,    1,    1,    1,    1],
+            },
+            columns = columns,
+        )
+        got = group_homogeneity(df)
+        want = [1.0, 1.0, 0.0]
         self.assertEqual(got, want, "got -> want")
 
 if __name__ == '__main__':
