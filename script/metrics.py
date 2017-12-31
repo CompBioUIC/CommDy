@@ -117,8 +117,12 @@ def peer_synchrony(df, community_subgroups):
     return values
 
 def group_size(df):
-    ##group.size = mean(merge(x, ddply(gtm, "group", nrow))$V1)
-    pass
+    group_size = df.dropna().groupby(['time', 'group'])['individual'].count().to_dict()
+    d = {
+        'individual': df['individual'],
+        'group_size': df.dropna().apply(lambda x: group_size[x['time'], x['group']], 1),
+    }
+    return pd.DataFrame(d).groupby('individual')['group_size'].mean().values.tolist()
 
 def individual_apparency(df):
     #ind.apparancy = nrow(na.omit(x))/nrow(x)

@@ -361,5 +361,55 @@ class TestPeerSynchrony(unittest.TestCase):
         want = [0.75, 0.75, 1.0]
         self.assertEqual(got, want, "got -> want")
 
+class TestGroupSize(unittest.TestCase):
+
+    def test_constant(self):
+        df = pd.DataFrame(
+            data={
+                'time'             : ['t1', 't1', 't2', 't2', 't3', 't3'],
+                'group'            : ['g1', 'g1', 'g1', 'g1', 'g1', 'g1'],
+                'individual'       : ['i1', 'i2', 'i1', 'i2', 'i1', 'i2'],
+                'group_color'      : [   1,    1,    1,    1,    1,    1],
+                'individual_color' : [   1,    1,    1,    1,    1,    1],
+            },
+            columns = columns,
+        )
+        tgc_members = compute_subgroups(df)
+        got = group_size(df)
+        want = [2.0, 2.0]
+        self.assertEqual(got, want, "got -> want")
+
+    def test_sizes_1_2_3(self):
+        df = pd.DataFrame(
+            data={
+                'time'             : ['t1', 't2', 't2', 't3', 't3', 't3'],
+                'group'            : ['g1', 'g1', 'g1', 'g1', 'g1', 'g1'],
+                'individual'       : ['i1', 'i1', 'i2', 'i1', 'i2', 'i3'],
+                'group_color'      : [   1,    1,    1,    1,    1,    1],
+                'individual_color' : [   1,    1,    1,    1,    1,    1],
+            },
+            columns = columns,
+        )
+        tgc_members = compute_subgroups(df)
+        got = group_size(df)
+        want = [2.0, 2.5, 3.0]
+        self.assertEqual(got, want, "got -> want")
+
+    def test_ignore_missing(self):
+        df = pd.DataFrame(
+            data={
+                'time'             : ['t1', 't1', 't2', 't2', 't3', 't3'],
+                'group'            : [None, 'g1', None, 'g1', 'g1', 'g1'],
+                'individual'       : ['i1', 'i2', 'i1', 'i2', 'i1', 'i2'],
+                'group_color'      : [None,    1, None,    1,    1,    1],
+                'individual_color' : [   1,    1,    1,    1,    1,    1],
+            },
+            columns = columns,
+        )
+        tgc_members = compute_subgroups(df)
+        got = group_size(df)
+        want = [2.0, 4./3]
+        self.assertEqual(got, want, "got -> want")
+
 if __name__ == '__main__':
     unittest.main()
