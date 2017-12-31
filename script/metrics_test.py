@@ -502,5 +502,37 @@ class TestIndividualApparancy(unittest.TestCase):
         want = [2.0]
         self.assertEqual(got, want, "got -> want")
 
+class TestCommunitySize(unittest.TestCase):
+
+    def test_size_two(self):
+        df = pd.DataFrame(
+            data={
+                'time'             : ['t1', 't1', 't1', 't2', 't2', 't2'],
+                'group'            : ['g1', 'g1', 'g2', 'g1', 'g1', 'g2'],
+                'individual'       : ['i1', 'i2', 'i3', 'i1', 'i2', 'i3'],
+                'group_color'      : [   1,    1,    2,    1,    1,    2],
+                'individual_color' : [   1,    1,    2,    1,    1,    2],
+            },
+            columns = columns,
+        )
+        got = community_size(df)
+        want = [2.0, 2.0, 1.0]
+        self.assertEqual(got, want, "got -> want")
+
+    def test_missing_is_included(self):
+        df = pd.DataFrame(
+            data={
+                'time'             : ['t1', 't1', 't2', 't2'],
+                'group'            : ['g1', 'g1', 'g1', None],
+                'individual'       : ['i1', 'i2', 'i1', 'i2'],
+                'group_color'      : [   1,    1,    1, None],
+                'individual_color' : [   1,    1,    1,    0],
+            },
+            columns = columns,
+        )
+        got = community_size(df)
+        want = [1.5, 1.5]
+        self.assertEqual(got, want, "got -> want")
+
 if __name__ == '__main__':
     unittest.main()
