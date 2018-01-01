@@ -10,6 +10,7 @@ def column_map():
         'individual_color': 'individual_color',
     }
 
+# Return the pairs of adjacent items.
 def adjacent_pairs(items):
     it = iter(items)
     prev = next(it)
@@ -17,6 +18,7 @@ def adjacent_pairs(items):
         yield prev, curr
         prev = curr
 
+# Compute the average of the given list, returning 0.0 when empty.
 def avg(items):
     return 0.0 if len(items) == 0 else sum(items) / float(len(items))
 
@@ -73,6 +75,7 @@ def community_stay(df):
         values.append(avg(xs))
     return values
 
+# Convenient function.
 # A subgroup of a group contains the members of the same community.
 def compute_subgroups(df):
     community_subgroups = {}
@@ -172,8 +175,19 @@ def community_size(df):
         values.append(avg(xs))
     return values
 
-def compute_stats(df,
-        t_col='time', g_col='group', i_col='individual',
-        gcolor_col='gcolor', icolor_col='icolor'):
-    # TODO: implement this.
-    pass
+# Compute individual metrics.
+def compute_individual_metrics(df, column_map=column_map()):
+    community_subgroups = compute_subgroups(df)
+    d = []
+    d.append(('individual',           df['individual'].unique()))
+    d.append(('absenteeism',          absenteeism(df)))
+    d.append(('inquisitiveness',      inquisitiveness(df)))
+    d.append(('community_stay',       community_stay(df)))
+    d.append(('avg_num_peers',        avg_num_peers(df, community_subgroups)))
+    d.append(('peer_synchrony',       peer_synchrony(df, community_subgroups)))
+    d.append(('group_size',           group_size(df)))
+    d.append(('group_homogeneity',    group_homogeneity(df)))
+    d.append(('individual_apparency', individual_apparency(df)))
+    d.append(('cyclicity',            cyclicity(df)))
+    d.append(('community_size',       community_size(df)))
+    return pd.DataFrame(dict(d), columns=[c for c, _ in d])

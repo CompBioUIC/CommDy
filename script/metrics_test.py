@@ -3,6 +3,7 @@ import re
 import unittest
 
 from metrics import *
+from pandas.util.testing import assert_frame_equal
 
 columns = 'time group individual group_color individual_color'.split(' ')
 
@@ -548,6 +549,33 @@ class TestCommunitySize(unittest.TestCase):
         got = community_size(df)
         want = [1.5, 1.5]
         self.assertEqual(got, want, "got -> want")
+
+class TestIndividualMetrics(unittest.TestCase):
+    def test_1(self):
+
+        df = pd.DataFrame({
+            'time'             : ['t1', 't1', 't2', 't2', 't3', 't3'],
+            'group'            : ['g1', 'g1', 'g1', None, 'g1', 'g1'],
+            'individual'       : ['i1', 'i2', 'i1', 'i2', 'i1', 'i2'],
+            'group_color'      : [   1,    1,    1, None,     1,   1],
+            'individual_color' : [   1,    1,    1,    1,     1,   1],
+        })
+        got = compute_individual_metrics(df)
+        want = [
+            ('individual',           ['i1', 'i2']),
+            ('absenteeism',          [ 0.0, 1./3]),
+            ('inquisitiveness',      [ 0.0,  0.0]),
+            ('community_stay',       [ 3.0,  3.0]),
+            ('avg_num_peers',        [2./3,  1.0]),
+            ('peer_synchrony',       [ 0.0,  0.0]),
+            ('group_size',           [5./3,  2.0]),
+            ('group_homogeneity',    [ 1.0,  1.0]),
+            ('individual_apparency', [ 3.0,  3.0]),
+            ('cyclicity',            [   0,    0]),
+            ('community_size',       [ 2.0,  2.0]),
+        ]
+        want = pd.DataFrame(dict(want), columns=[c for c, _ in want])
+        assert_frame_equal(got, want, "got -> want")
 
 if __name__ == '__main__':
     unittest.main()
