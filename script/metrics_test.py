@@ -313,39 +313,7 @@ class TestPeerSynchrony(unittest.TestCase):
         want = [1.0, 1.0, 1.0, 1.0]
         self.assertEqual(got, want, "got -> want")
 
-    def test_ignore_missing1(self):
-        df = pd.DataFrame(
-            data={
-                'time'             : ['t1', 't1', 't1', 't2', 't2', 't2'],
-                'group'            : ['g1', 'g1', 'g1', 'g1', 'g1', None],
-                'individual'       : ['i1', 'i2', 'i3', 'i1', 'i2', 'i3'],
-                'group_color'      : [   1,    1,    1,    1,    1, None],
-                'individual_color' : [   1,    1,    1,    1,    1,    1],
-            },
-            columns = columns,
-        )
-        tgc_members = compute_subgroups(df)
-        got = peer_synchrony(df, tgc_members)
-        want = [1.0, 1.0, 0.0]
-        self.assertEqual(got, want, "got -> want")
-
-    def test_ignore_missing2(self):
-        df = pd.DataFrame(
-            data={
-                'time'             : ['t1', 't1', 't1', 't2', 't2', 't2'],
-                'group'            : ['g1', 'g1', None, 'g1', 'g1', 'g1'],
-                'individual'       : ['i1', 'i2', 'i3', 'i1', 'i2', 'i3'],
-                'group_color'      : [   1,    1, None,    1,    1,    1],
-                'individual_color' : [   1,    1,    1,    1,    1,    1],
-            },
-            columns = columns,
-        )
-        tgc_members = compute_subgroups(df)
-        got = peer_synchrony(df, tgc_members)
-        want = [0.5, 0.5, 0.0]
-        self.assertEqual(got, want, "got -> want")
-
-    def test_ignore_missing3(self):
+    def test_include_missing(self):
         df = pd.DataFrame(
             data={
                 'time'             : ['t1', 't1', 't1', 't2', 't2', 't2', 't3', 't3', 't3'],
@@ -358,7 +326,7 @@ class TestPeerSynchrony(unittest.TestCase):
         )
         tgc_members = compute_subgroups(df)
         got = peer_synchrony(df, tgc_members)
-        want = [0.75, 0.75, 1.0]
+        want = [0.75, 0.75, 0.0]
         self.assertEqual(got, want, "got -> want")
 
 class TestGroupSize(unittest.TestCase):

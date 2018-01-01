@@ -104,9 +104,12 @@ def peer_synchrony(df, community_subgroups):
     values = []
     for _, group in df.groupby(['individual']):
         xs = []
-        for (_, prev_row), (_, curr_row) in adjacent_pairs(group.dropna().iterrows()):
+        for (_, prev_row), (_, curr_row) in adjacent_pairs(group.iterrows()):
             t1, g1, c1 = prev_row['time'], prev_row['group'], prev_row['individual_color']
             t2, g2, c2 = curr_row['time'], curr_row['group'], curr_row['individual_color']
+            if pd.isnull(g1) or pd.isnull(g2):
+                xs.append(0.0)
+                continue
             members1 = community_subgroups[t1, g1, c1]
             members2 = community_subgroups[t2, g2, c2]
             if len(members2) == 1:
