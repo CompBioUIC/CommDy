@@ -101,7 +101,7 @@ class Node:
 #        subject to:       A  * x <= b
 # So we multiple -1 through the last set of constraints (x_e >= 0) to get it
 # in the accepted form.
-def create_linear_program(df, debug=False,
+def create_linear_program(df, debug=False, reduce_colors=True,
         t_col='time', g_col='group', i_col='individual'):
     t_min = df[t_col].min()
     t_max = df[t_col].max()
@@ -132,14 +132,15 @@ def create_linear_program(df, debug=False,
                 w[edge] += 1.0
             else:
                 w[edge] = 1.0
-        # Add time-warping edges between real nodes with an epsilon weight to
-        # artificially reduce the number of colors used.
-        epsilon = 0.01 / len(real_nodes)**2
-        for i in range(len(real_nodes)):
-            for j in range(i+2, len(real_nodes)):
-                edge = (real_nodes[i], real_nodes[j])
-                if not edge in w:
-                    w[edge] = epsilon
+        if reduce_colors:
+            # Add time-warping edges between real nodes with an epsilon weight to
+            # artificially reduce the number of colors used.
+            epsilon = 0.01 / len(real_nodes)**2
+            for i in range(len(real_nodes)):
+                for j in range(i+2, len(real_nodes)):
+                    edge = (real_nodes[i], real_nodes[j])
+                    if not edge in w:
+                        w[edge] = epsilon
     all_nodes = sorted(node_set)
     all_edges = sorted(w)
     n = len(all_nodes)
@@ -217,9 +218,9 @@ def convert_lp_solution_to_coloring(edges, sol, times, debug=False):
             tg_color[t][g] = color_idx + 1
     return tg_color
 
-def color_groups(df,
+def color_groups(df, reduce_colors=True,
         t_col='time', g_col='group', i_col='individual'):
-    c, A, b, nodes, edges = create_linear_program(df, t_col=t_col, g_col=g_col, i_col=i_col)
+    c, A, b, nodes, edges = create_linear_program(df, t_col=t_col, g_col=g_col, i_col=i_col, reduce_colors=reduce_colors)
     sol = solvers.lp(c, A, b)
     if sol['status'] != 'optimal':
         print("Solver error:", sol, file=sys.stderr)
@@ -230,9 +231,9 @@ def color_groups(df,
 def color_dataframe(df,
         sw=1, ab=1, vi=1,
         t_col='time', g_col='group', i_col='individual',
-        gcolor_col='gcolor', icolor_col='icolor'):
+        gcolor_col='gcolor', icolor_col='icolor', reduce_colors=False):
     # Color the groups.
-    tg_color = color_groups(df, t_col=t_col, g_col=g_col, i_col=i_col)
+    tg_color = color_groups(df, t_col=t_col, g_col=g_col, i_col=i_col, reduce_colors=reduce_colors)
 
     # Color the individuals.
     tgi = df.apply(lambda x : (x[t_col], x[g_col], x[i_col]), axis=1)
