@@ -1,3 +1,5 @@
+import sys
+
 class Cost:
     def __init__(self, value=0, debug=None, color=None, previous_color=None):
         self.value = value
@@ -59,7 +61,7 @@ def color_individuals(tgi, tg_color, sw=1, ab=1, vi=1, only_individual=None):
     it_color = {}
     total_min_cost = 0
     for i in individuals:
-        # Find colors.
+        # Find group colors.
         colors = set([0])
         for t in times:
             if (i, t) not in it_group:

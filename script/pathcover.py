@@ -50,6 +50,44 @@ class UnionFind:
                 members[p] = [x]
         return members.values()
 
+NODE_TYPE_FIRST = 0
+NODE_TYPE_REAL  = 1
+NODE_TYPE_LAST  = 2
+
+NODE_TYPE_NAME_SUFFIXES = [".first", "", ".last"]
+
+class Node:
+    def __init__(self, t, g, node_type=NODE_TYPE_REAL):
+        self.t, self.g, self.node_type = t, g, node_type
+
+    def is_real(self):
+        return self.node_type == NODE_TYPE_REAL
+
+    def __repr__(self):
+        return "%s.%s%s"%(self.t, self.g, NODE_TYPE_NAME_SUFFIXES[self.node_type])
+
+    # Needed for sort().
+    def __lt__(self, other):
+        if self.t != other.t:
+            return self.t < other.t
+        if self.g != other.g:
+            return self.g < other.g
+        if self.node_type != self.node_type:
+            return self.node_type < self.node_type
+        return False
+
+    # Needed as a dict key.
+    def __hash__(self):
+        return hash((self.t, self.g, self.node_type))
+
+    # Needed as a dict key.
+    def __eq__(self, other):
+        return (self.t, self.g, self.node_type) == (other.t, other.g, other.node_type)
+
+    # Needed as a dict key.
+    def __ne__(self, other):
+        return not(self == other)
+
 # Creates a linear program from the given data frame.
 # The LP has the following form.
 #        minimize:         w' * x_e
@@ -72,20 +110,20 @@ def create_linear_program(df, debug=False,
     # Creates nodes and edges.
     node_set = set()
     for i, gb in df.groupby(i_col):
-        real_nodes = ["%s.%s"%tg for tg in zip(gb[t_col], gb[g_col])]
+        real_nodes = [Node(t, g) for t, g in zip(gb[t_col], gb[g_col])]
         nodes = []
         if gb[t_col].iloc[0] != t_min:
             # Create a fake node for a group that appears first in the second
             # time step or later so that the optimal path-cover is not forced
             # to be connected to some small group in a preceeding time step.
-            nodes.append("%s.%s.first"%(gb[t_col].iloc[0], gb[g_col].iloc[0]))
+            nodes.append(Node(gb[t_col].iloc[0], gb[g_col].iloc[0], NODE_TYPE_FIRST))
         nodes.extend(real_nodes)
         if gb[t_col].iloc[-1] != t_max and t_min != t_max:
             # Create a fake node for a group that appear last in the second to
             # last time step or earlier so that the optimal path-cover is not
             # forced to be connected to some small group in a succeeding time
             # step.
-            nodes.append("%s.%s.last"%(gb[t_col].iloc[-1], gb[g_col].iloc[-1]))
+            nodes.append(Node(gb[t_col].iloc[-1], gb[g_col].iloc[-1], NODE_TYPE_LAST))
         # Update the set of all nodes.
         node_set.update(nodes)
         # Add edges between real/fake nodes with weight 1 per individual.
@@ -100,7 +138,8 @@ def create_linear_program(df, debug=False,
         for i in range(len(real_nodes)):
             for j in range(i+2, len(real_nodes)):
                 edge = (real_nodes[i], real_nodes[j])
-                w[edge] = epsilon
+                if not edge in w:
+                    w[edge] = epsilon
     all_nodes = sorted(node_set)
     all_edges = sorted(w)
     n = len(all_nodes)
@@ -125,49 +164,56 @@ def create_linear_program(df, debug=False,
         print("c:", c)
     return c, A, b, all_nodes, all_edges
 
-def convert_lp_solution_to_coloring(edges, sol, debug=False):
+def convert_lp_solution_to_coloring(edges, sol, times, debug=False):
     X = sol['x']
     if debug:
         print("X:", X)
         print("edges:", edges)
     uf = UnionFind()
     timestamp_cover = {}
-    for x, (n1, n2) in sorted(zip(X, edges), reverse=True):
-        if not n1.endswith('.first'):
-            uf.MakeSet(n1)
-        if not n2.endswith('.last'):
-            uf.MakeSet(n2)
-        if x < 1e-5:
-            continue
-        if n1.endswith('.first') or n2.endswith('.last'):
-            continue
-        t1, g1 = n1.split('.')
-        t2, g2 = n2.split('.')
+    weight_edges = sorted(zip(X, edges), reverse=True)
+    for x, (n1, n2) in weight_edges:
+        t1, g1 = n1.t, n1.g
+        t2, g2 = n2.t, n2.g
         p1 = uf.Find(n1)
         p2 = uf.Find(n2)
         if p1 in timestamp_cover:
             cover1 = timestamp_cover[p1]
         else:
-            cover1 = timestamp_cover[p1] = set([t1])
+            if n1.is_real():
+                cover1 = set([t1])
+            else:
+                cover1 = set(times[:times[times == t1].index[0]])
+            timestamp_cover[p1] = cover1
         if p2 in timestamp_cover:
             cover2 = timestamp_cover[p2]
         else:
-            cover2 = timestamp_cover[p2] = set([t2])
+            if n2.is_real():
+                cover2 = set([t2])
+            else:
+                cover2 = set(times[times[times == t2].index[0]+1:])
+            timestamp_cover[p2] = cover2
         if len(cover1.intersection(cover2)) > 0:
             if debug:
-                print("ignore", (t1, g1), (t2, g2), cover1, cover2)
+                print("ignore", n1, n2, cover1, cover2)
             continue
         if debug:
-            print("union", (t1, g1), (t2, g2), cover1, cover2)
+            print("union", n1, n2, cover1, cover2)
         p = uf.Union(n1, n2)
-        timestamp_cover[p].update([t1, t2])
+        timestamp_cover[p].update(cover1)
+        timestamp_cover[p].update(cover2)
     # Assign colors to groups.
     tg_color = {}
-    for color_idx, members in enumerate(sorted(uf.Partition(), key=lambda x: (len(x), x), reverse=True)):
-        for tg in members:
-            t, g = tg.split('.')
+    partition = sorted(uf.Partition(), key=lambda x: (len(x), x), reverse=True)
+    for color_idx, members in enumerate(partition):
+        for node in members:
+            if not node.is_real():
+                continue
+            t, g = node.t, node.g
             if t not in tg_color:
                 tg_color[t] = {}
+            if g in tg_color[t]:
+                raise Exception("%s.%s already exists in tg_color %s"%(t, g, tg_color))
             tg_color[t][g] = color_idx + 1
     return tg_color
 
@@ -178,7 +224,7 @@ def color_groups(df,
     if sol['status'] != 'optimal':
         print("Solver error:", sol, file=sys.stderr)
         return None
-    tg_color = convert_lp_solution_to_coloring(edges, sol)
+    tg_color = convert_lp_solution_to_coloring(edges, sol, df[t_col].drop_duplicates())
     return tg_color
 
 def color_dataframe(df,

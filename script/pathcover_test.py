@@ -1,14 +1,13 @@
 import unittest
+import pandas
 
-from cvxopt import solvers
 from pathcover import color_groups, color_dataframe
-from pandas import DataFrame, read_csv
 from pandas.util.testing import assert_frame_equal
 from collections import namedtuple
 from test_util import expand
 
 def to_dataframe(tgi):
-    return DataFrame(data={
+    return pandas.DataFrame(data={
         'time': [t for t, _, _ in tgi],
         'group': [g for _, g, _ in tgi],
         'individual': [i for _, _, i in tgi],
@@ -112,27 +111,33 @@ class TestPathCover(unittest.TestCase):
                     self.assertEqual(sorted(got), want, "i=%d"%i)
 
     def test_file_111(self):
-        df = read_csv('testdata/test.csv')
+        df = pandas.read_csv('testdata/test.csv')
         got = color_dataframe(df, sw=1, ab=1, vi=1)
-        want = read_csv('testdata/test_111_want.csv')
+        want = pandas.read_csv('testdata/test_111_want.csv')
         assert_frame_equal(got, want)
 
     def test_file_119(self):
-        df = read_csv('testdata/test.csv')
+        df = pandas.read_csv('testdata/test.csv')
         got = color_dataframe(df, sw=1, ab=1, vi=9)
-        want = read_csv('testdata/test_119_want.csv')
+        want = pandas.read_csv('testdata/test_119_want.csv')
         assert_frame_equal(got, want)
 
     def test2_file_111(self):
-        df = read_csv('testdata/test2.csv')
+        df = pandas.read_csv('testdata/test2.csv')
         got = color_dataframe(df, sw=1, ab=1, vi=1)
-        want = read_csv('testdata/test2_111_want.csv')
+        want = pandas.read_csv('testdata/test2_111_want.csv')
         assert_frame_equal(got, want)
 
     def test2_file_191(self):
-        df = read_csv('testdata/test2.csv')
+        df = pandas.read_csv('testdata/test2.csv')
         got = color_dataframe(df, sw=1, ab=9, vi=1)
-        want = read_csv('testdata/test2_191_want.csv')
+        want = pandas.read_csv('testdata/test2_191_want.csv')
+        assert_frame_equal(got, want)
+
+    def test3_file_111(self):
+        df = pandas.read_csv('testdata/test3.csv')
+        got = color_dataframe(df, sw=1, ab=1, vi=1)
+        want = pandas.read_csv('testdata/test3_111_want.csv')
         assert_frame_equal(got, want)
 
 if __name__ == '__main__':
