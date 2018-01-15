@@ -101,7 +101,7 @@ class Node:
 #        subject to:       A  * x <= b
 # So we multiple -1 through the last set of constraints (x_e >= 0) to get it
 # in the accepted form.
-def create_linear_program(df, debug=False, reduce_colors=True,
+def create_linear_program(df, debug=False, reduce_colors=False,
         t_col='time', g_col='group', i_col='individual'):
     t_min = df[t_col].min()
     t_max = df[t_col].max()
@@ -218,7 +218,7 @@ def convert_lp_solution_to_coloring(edges, sol, times, debug=False):
             tg_color[t][g] = color_idx + 1
     return tg_color
 
-def color_groups(df, reduce_colors=True,
+def color_groups(df, reduce_colors=False,
         t_col='time', g_col='group', i_col='individual'):
     c, A, b, nodes, edges = create_linear_program(df, t_col=t_col, g_col=g_col, i_col=i_col, reduce_colors=reduce_colors)
     sol = solvers.lp(c, A, b)
