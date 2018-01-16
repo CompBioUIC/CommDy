@@ -13,7 +13,7 @@ def to_dataframe(tgi):
         'individual': [i for _, _, i in tgi],
     })
 
-TestCase = namedtuple('TestCase', 'name tgi want_eq_classes')
+TestCase = namedtuple('TestCase', 'name tgi want_eq_classes reduce_colors')
 
 class TestPathCover(unittest.TestCase):
 
@@ -21,6 +21,7 @@ class TestPathCover(unittest.TestCase):
         subtests = [
             TestCase(
                 name = 'test1',
+                reduce_colors = False,
                 tgi = [
                     ("t1", "g1", "i1"),
                     ("t2", "g1", "i1"),
@@ -34,6 +35,7 @@ class TestPathCover(unittest.TestCase):
             ),
             TestCase(
                 name = 'test2',
+                reduce_colors = False,
                 tgi = [
                     ('t1', [
                         ('g1', ['i1', 'i2', 'i3']),
@@ -67,6 +69,7 @@ class TestPathCover(unittest.TestCase):
             ),
             TestCase(
                 name = 'artificial_edges',
+                reduce_colors = True,
                 tgi = [
                     ('t1', [
                         ('g1', 'i1'),
@@ -96,7 +99,7 @@ class TestPathCover(unittest.TestCase):
         for subtest in subtests:
             with self.subTest(subtest.name):
                 df = to_dataframe(expand(subtest.tgi))
-                tg_color = color_groups(df)
+                tg_color = color_groups(df, reduce_colors=subtest.reduce_colors)
 
                 color_classes = {}
                 for t, gcs in tg_color.items():
@@ -112,31 +115,31 @@ class TestPathCover(unittest.TestCase):
 
     def test_file_111(self):
         df = pandas.read_csv('testdata/test.csv')
-        got = color_dataframe(df, sw=1, ab=1, vi=1)
+        got = color_dataframe(df, sw=1, ab=1, vi=1, reduce_colors=True)
         want = pandas.read_csv('testdata/test_111_want.csv')
         assert_frame_equal(got, want)
 
     def test_file_119(self):
         df = pandas.read_csv('testdata/test.csv')
-        got = color_dataframe(df, sw=1, ab=1, vi=9)
+        got = color_dataframe(df, sw=1, ab=1, vi=9, reduce_colors=True)
         want = pandas.read_csv('testdata/test_119_want.csv')
         assert_frame_equal(got, want)
 
     def test2_file_111(self):
         df = pandas.read_csv('testdata/test2.csv')
-        got = color_dataframe(df, sw=1, ab=1, vi=1)
+        got = color_dataframe(df, sw=1, ab=1, vi=1, reduce_colors=False)
         want = pandas.read_csv('testdata/test2_111_want.csv')
         assert_frame_equal(got, want)
 
     def test2_file_191(self):
         df = pandas.read_csv('testdata/test2.csv')
-        got = color_dataframe(df, sw=1, ab=9, vi=1)
+        got = color_dataframe(df, sw=1, ab=9, vi=1, reduce_colors=False)
         want = pandas.read_csv('testdata/test2_191_want.csv')
         assert_frame_equal(got, want)
 
     def test3_file_111(self):
         df = pandas.read_csv('testdata/test3.csv')
-        got = color_dataframe(df, sw=1, ab=1, vi=1)
+        got = color_dataframe(df, sw=1, ab=1, vi=1, reduce_colors=False)
         want = pandas.read_csv('testdata/test3_111_want.csv')
         assert_frame_equal(got, want)
 
