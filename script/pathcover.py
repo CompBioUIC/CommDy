@@ -1,11 +1,16 @@
 import sys
+
+from collections import namedtuple
+from color_individuals import color_individuals
 from cvxopt import solvers, matrix, spmatrix, sparse
 from itertools import groupby
 from pandas import DataFrame
-from color_individuals import color_individuals
 
 # Suppress the progress message during solvers.lp().
 solvers.options['show_progress'] = False
+
+Header = namedtuple('Header', 't g i gc ic')
+DEFAULT_HEADER = Header('time', 'group', 'individual', 'gcolor', 'icolor')
 
 class UnionFind:
     def __init__(self):
@@ -101,29 +106,28 @@ class Node:
 #        subject to:       A  * x <= b
 # So we multiple -1 through the last set of constraints (x_e >= 0) to get it
 # in the accepted form.
-def create_linear_program(df, debug=False, reduce_colors=False,
-        t_col='time', g_col='group', i_col='individual'):
-    t_min = df[t_col].min()
-    t_max = df[t_col].max()
+def create_linear_program(df, debug=False, reduce_colors=False, header=DEFAULT_HEADER):
+    t_min = df[header.t].min()
+    t_max = df[header.t].max()
     w = {}
 
     # Creates nodes and edges.
     node_set = set()
-    for i, gb in df.groupby(i_col):
-        real_nodes = [Node(t, g) for t, g in zip(gb[t_col], gb[g_col])]
+    for i, gb in df.groupby(header.i):
+        real_nodes = [Node(t, g) for t, g in zip(gb[header.t], gb[header.g])]
         nodes = []
-        if gb[t_col].iloc[0] != t_min:
+        if gb[header.t].iloc[0] != t_min:
             # Create a fake node for a group that appears first in the second
             # time step or later so that the optimal path-cover is not forced
             # to be connected to some small group in a preceeding time step.
-            nodes.append(Node(gb[t_col].iloc[0], gb[g_col].iloc[0], NODE_TYPE_FIRST))
+            nodes.append(Node(gb[header.t].iloc[0], gb[header.g].iloc[0], NODE_TYPE_FIRST))
         nodes.extend(real_nodes)
-        if gb[t_col].iloc[-1] != t_max and t_min != t_max:
+        if gb[header.t].iloc[-1] != t_max and t_min != t_max:
             # Create a fake node for a group that appear last in the second to
             # last time step or earlier so that the optimal path-cover is not
             # forced to be connected to some small group in a succeeding time
             # step.
-            nodes.append(Node(gb[t_col].iloc[-1], gb[g_col].iloc[-1], NODE_TYPE_LAST))
+            nodes.append(Node(gb[header.t].iloc[-1], gb[header.g].iloc[-1], NODE_TYPE_LAST))
         # Update the set of all nodes.
         node_set.update(nodes)
         # Add edges between real/fake nodes with weight 1 per individual.
@@ -218,40 +222,36 @@ def convert_lp_solution_to_coloring(edges, sol, times, debug=False):
             tg_color[t][g] = color_idx + 1
     return tg_color
 
-def color_groups(df, reduce_colors=False,
-        t_col='time', g_col='group', i_col='individual'):
-    c, A, b, nodes, edges = create_linear_program(df, t_col=t_col, g_col=g_col, i_col=i_col, reduce_colors=reduce_colors)
+def color_groups(df, reduce_colors=False, header=DEFAULT_HEADER):
+    c, A, b, nodes, edges = create_linear_program(df, header=header, reduce_colors=reduce_colors)
     sol = solvers.lp(c, A, b)
     if sol['status'] != 'optimal':
         print("Solver error:", sol, file=sys.stderr)
         return None
-    tg_color = convert_lp_solution_to_coloring(edges, sol, df[t_col].drop_duplicates())
+    tg_color = convert_lp_solution_to_coloring(edges, sol, df[header.t].drop_duplicates())
     return tg_color
 
-def color_dataframe(df,
-        sw=1, ab=1, vi=1,
-        t_col='time', g_col='group', i_col='individual',
-        gcolor_col='gcolor', icolor_col='icolor', reduce_colors=False):
+def color_dataframe(df, sw=1, ab=1, vi=1, header=DEFAULT_HEADER, reduce_colors=False):
     # Color the groups.
-    tg_color = color_groups(df, t_col=t_col, g_col=g_col, i_col=i_col, reduce_colors=reduce_colors)
+    tg_color = color_groups(df, header=header, reduce_colors=reduce_colors)
 
     # Color the individuals.
-    tgi = df.apply(lambda x : (x[t_col], x[g_col], x[i_col]), axis=1)
+    tgi = df.apply(lambda x : (x[header.t], x[header.g], x[header.i]), axis=1)
     total_min_color, it_color = color_individuals(tgi, tg_color, sw=sw, ab=ab, vi=vi)
 
     # Create a result data frame.
-    it_group = dict(df.apply(lambda x: ((x[i_col], x[t_col]), x[g_col]), 1).tolist())
-    data = { t_col: [], g_col: [], i_col: [], gcolor_col: [], icolor_col: [] }
-    def append(t, g, i, gcolor, icolor):
-        data[t_col].append(t)
-        data[g_col].append(g)
-        data[i_col].append(i)
-        data[gcolor_col].append(gcolor)
-        data[icolor_col].append(icolor)
-    for t in df[t_col].drop_duplicates().tolist():
-        for i in df[i_col].drop_duplicates().tolist():
+    it_group = dict(df.apply(lambda x: ((x[header.i], x[header.t]), x[header.g]), 1).tolist())
+    data = { header.t: [], header.g: [], header.i: [], header.gc: [], header.ic: [] }
+    def append(t, g, i, gc, ic):
+        data[header.t].append(t)
+        data[header.g].append(g)
+        data[header.i].append(i)
+        data[header.gc].append(gc)
+        data[header.ic].append(ic)
+    for t in df[header.t].drop_duplicates().tolist():
+        for i in df[header.i].drop_duplicates().tolist():
             g = it_group[i, t] if (i, t) in it_group else None
-            gcolor = tg_color[t][g] if (i, t) in it_group else None
-            icolor = it_color[i, t]
-            append(t, g, i, gcolor, icolor)
-    return DataFrame(data, columns=[t_col, g_col, i_col, gcolor_col, icolor_col])
+            gc = tg_color[t][g] if (i, t) in it_group else None
+            ic = it_color[i, t]
+            append(t, g, i, gc, ic)
+    return DataFrame(data, columns=[header.t, header.g, header.i, header.gc, header.ic])

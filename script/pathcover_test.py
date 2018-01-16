@@ -1,9 +1,9 @@
 import unittest
 import pandas
 
-from pathcover import color_groups, color_dataframe
-from pandas.util.testing import assert_frame_equal
 from collections import namedtuple
+from pandas.util.testing import assert_frame_equal
+from pathcover import color_groups, color_dataframe, Header
 from test_util import expand
 
 def to_dataframe(tgi):
@@ -137,10 +137,19 @@ class TestPathCover(unittest.TestCase):
         want = pandas.read_csv('testdata/test2_191_want.csv')
         assert_frame_equal(got, want)
 
+    # Numeric timesteps and groups.
     def test3_file_111(self):
         df = pandas.read_csv('testdata/test3.csv')
         got = color_dataframe(df, sw=1, ab=1, vi=1, reduce_colors=False)
         want = pandas.read_csv('testdata/test3_111_want.csv')
+        assert_frame_equal(got, want)
+
+    # Different header.
+    def test4_file_111(self):
+        header = Header('Time', 'Group', 'Member', 'Group Community', 'Member Community')
+        df = pandas.read_csv('testdata/test4.csv')
+        got = color_dataframe(df, sw=1, ab=1, vi=1, reduce_colors=False, header=header)
+        want = pandas.read_csv('testdata/test4_111_want.csv')
         assert_frame_equal(got, want)
 
 if __name__ == '__main__':
