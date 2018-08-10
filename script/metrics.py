@@ -153,6 +153,7 @@ def individual_apparency(df):
         values.append(avg([community_apparency[ic] for ic in set(group['icolor'].values)]))
     return values
 
+# The number of times an individual switches back to a community it has been affiliated with.
 def cyclicity(df):
     values = []
     for i, group in df.groupby('individual'):
